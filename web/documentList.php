@@ -23,9 +23,9 @@ if (!$hreq->isEmpty()) {
 	$pdo=new PDO("mysql:host=127.12.155.130;dbname=testapp;charset=UTF-8","testapp","1qazxsw2",array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
 	//prior to PHP 5.3.6, the charset option was ignored. If you're running an older version of PHP, you must do it like this:
 	$pdo->exec("set names utf8");
-	$query = "SELECT * FROM document WHERE docDate BETWEEN :dateStart AND :dateEnd";
+	$query = "SELECT * FROM document WHERE docDate BETWEEN :dateStart AND :dateEnd AND displayName LIKE :name";
 	$sth=$pdo->prepare($query);
-	$sth->execute(array(":dateStart"=>$req->dateStart,":dateEnd"=>$req->dateEnd));
+	$sth->execute(array(":dateStart"=>$req->dateStart,":dateEnd"=>$req->dateEnd,":name"=>"%".$req->name."%"));
 	while($row=$sth->fetch(PDO::FETCH_ASSOC)) {
 		$doc = new TestApp_Document();
 		$doc->fromArray($row);
@@ -35,5 +35,14 @@ if (!$hreq->isEmpty()) {
 $xw->endElement();
 $xw->endDocument();
 //Вывод ответа клиенту
-header("Content-Type: text/xml");
-echo $xw->flush();
+if(!$hreq->isEmpty() && $req->outputFormat=='pdf') {
+    $pdfConverter = new XmlToPdfConverter($xw->flush());
+    $fileName = "docs.pdf";
+    header("Content-Type: application/pdf");
+    header("Content-Disposition: inline; filename*=UTF-8''" . $fileName);
+
+    echo $pdfConverter->getPdf();
+} else {
+    header("Content-Type: text/xml");
+    echo $xw->flush();
+}
